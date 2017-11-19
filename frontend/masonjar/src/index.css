@@ -1,0 +1,31 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: sans-serif;
+}
+
+div.payment {
+/*   width: 30%; */
+/*   text-align: left; */
+  margin: auto;
+}
+
+button.delete {
+  background: grey;
+  border-radius: 20px;
+  border-width: 0px;
+  text-align: center;
+  color: white;
+  -webkit-transition-duration: 0.5s;
+       -o-transition-duration: 0.5s;
+          transition-duration: 0.5s;
+}
+
+button.delete:hover {
+  background: whitesmoke;
+  color: firebrick;
+  -webkit-transition-duration: 0.2s;
+       -o-transition-duration: 0.2s;
+          transition-duration: 0.2s;
+}
+
