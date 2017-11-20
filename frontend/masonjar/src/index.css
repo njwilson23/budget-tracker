@@ -29,3 +29,6 @@ button.delete:hover {
           transition-duration: 0.2s;
 }
 
+.App-header {
+  height: 50px;
+}

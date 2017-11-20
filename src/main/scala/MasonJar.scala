@@ -13,7 +13,7 @@ class MasonJar() {
     }
 
     def _getPaymentByIndex(index: Int, payments: List[(Int, Payment)]): Option[Payment] ={
-        if (payments.length == 0) None
+        if (payments.isEmpty) None
         else payments.head match {
             case (i, pmt) if i == index => Some(pmt)
             case (i, _) if i != index => _getPaymentByIndex(index, payments.tail)
@@ -21,6 +21,8 @@ class MasonJar() {
     }
 
     def getPayment(index: Int): Option[Payment] = _getPaymentByIndex(index, payments)
+
+    def getAllPayments: List[(Int, Payment)] = payments
 
     def popPayment(index: Int): Option[Payment] = {
         val pmt = _getPaymentByIndex(index, payments)

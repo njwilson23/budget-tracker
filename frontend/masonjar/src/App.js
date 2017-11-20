@@ -4,10 +4,14 @@ import './App.css';
 
 class Payment extends Component {
     render() {
+        let pmt = this.props.payment;
+        let displayString = pmt.payer + " paid " + pmt.payee + " $" + pmt.amount;
         return (
             <div className="payment">
-                <p>{this.props.payer + " paid " + this.props.payee + " $" + this.props.amount} <button className="delete">X</button>
-            </p>
+                <p>{displayString}
+                    <button className="delete"
+                            onClick={this.props.deleteHandler}>Cancel</button>
+                </p>
             </div>
         )
     }
@@ -25,50 +29,52 @@ class PaymentEditor extends Component {
             "host": props.host
         }
 
+        this.addHandler = props.addHandler;
+
         this.handleDateChange = this.handleDateChange.bind(this);
         this.handlePayerChange = this.handlePayerChange.bind(this);
         this.handlePayeeChange = this.handlePayeeChange.bind(this);
         this.handleAmountChange = this.handleAmountChange.bind(this);
         this.handleSubmit = this.handleSubmit.bind(this);
-
     }
 
-    handleDateChange(event) {
-        this.setState({"date": event.target.value});
+    handleDateChange(ev) {
+        this.setState({"date": ev.target.value});
     }
 
-    handlePayerChange(event) {
-        this.setState({"payer": event.target.value});
+    handlePayerChange(ev) {
+        this.setState({"payer": ev.target.value});
     }
 
-    handlePayeeChange(event) {
-        this.setState({"payee": event.target.value});
+    handlePayeeChange(ev) {
+        this.setState({"payee": ev.target.value});
     }
 
-    handleAmountChange(event) {
-        this.setState({"amount": event.target.value});
+    handleAmountChange(ev) {
+        this.setState({"amount": ev.target.value});
     }
 
-    handleSubmit(event) {
-        console.log(this.state)
-        event.preventDefault()
+    handleSubmit(ev) {
+        this.addHandler(this.state)
+        ev.preventDefault()
     }
 
     render() {
-        return (<form onSubmit={this.handleSubmit}>
-            <label><br/>Date:<input type="text"
-                            value={this.state.date}
-                            onChange={this.handleDateChange}/></label>
-            <label><br/>Payer:<input type="text"
-                            value={this.state.payer}
-                            onChange={this.handlePayerChange}/></label>
-            <label><br/>Payee:<input type="text"
-                            value={this.state.payee}
-                            onChange={this.handlePayeeChange}/></label>
-            <label><br/>Amount:<input type="text"
-                            value={this.state.amount}
-                            onChange={this.handleAmountChange}/></label>
-            <br/><input type="submit" value="Add receipt"/>
+        return (
+            <form onSubmit={this.handleSubmit}>
+                <label><br/>Date:<input type="text"
+                                value={this.state.date}
+                                onChange={this.handleDateChange}/></label>
+                <label><br/>Payer:<input type="text"
+                                value={this.state.payer}
+                                onChange={this.handlePayerChange}/></label>
+                <label><br/>Payee:<input type="text"
+                                value={this.state.payee}
+                                onChange={this.handlePayeeChange}/></label>
+                <label><br/>Amount:<input type="text"
+                                value={this.state.amount}
+                                onChange={this.handleAmountChange}/></label>
+                <br/><input type="submit" value="Add receipt"/>
             </form>);
     }
 }
@@ -78,28 +84,61 @@ class App extends Component {
     constructor(props) {
         super(props)
         this.state = {
-            "payments": [
-                [1, {"payer": "Alice", "payee": "Bob", "amount": 10.00}],
-                [2, {"payer": "Bob", "payee": "Alice", "amount": 7.50}],
-                [3, {"payer": "Alice", "payee": "Bob", "amount": 19.31}],
-            ],
-            "host": "localhost:8080"
+            "payments": [],
+            "host": "http://localhost:8080"
         }
+
+        // Populate payment list
+        let req = new XMLHttpRequest();
+        req.open("GET", this.state.host + "/payments/all", true);
+        req.onreadystatechange = () => {
+            if (req.readyState === XMLHttpRequest.DONE && req.status === 200) {
+                this.setState({"payments": JSON.parse(req.responseText)});
+            }
+        }
+        req.send();
+
+        this.addPayment = this.addPayment.bind(this)
+        this.deletePayment = this.deletePayment.bind(this)
+    }
+
+    addPayment(pmt) {
+        let req = new XMLHttpRequest();
+        req.open("POST", this.state.host + "/payments/add", true);
+        req.onreadystatechange = () => {
+            if (req.readyState === XMLHttpRequest.DONE && req.status === 200) {
+                this.setState({"payments":
+                               this.state.payments.concat([[Number(req.responseText), pmt]])});
+            }
+        }
+        req.send(JSON.stringify(pmt));
+    }
+
+    deletePayment(id) {
+        let req = new XMLHttpRequest();
+        req.open("POST", this.state.host + "/payments/delete", true);
+        req.onreadystatechange = () => {
+            if (req.readyState === XMLHttpRequest.DONE && req.status === 200) {
+                this.setState({"payments":
+                               this.state.payments.filter((a) => a[0] !== id)});
+            }
+        }
+        req.send(JSON.stringify({"id": id}));
     }
 
     render() {
         let payments = this.state.payments.map((pmt) =>
             <Payment key={pmt[0]}
-                     payer={pmt[1].payer}
-                     payee={pmt[1].payee}
-                     amount={pmt[1].amount} />
+                     payment={pmt[1]}
+                     deleteHandler={(e) => this.deletePayment(pmt[0])}
+             />
         );
         return (
           <div className="App">
             <header className="App-header">
               <h1 className="App-title">Spending Record</h1>
             </header>
-            <PaymentEditor host={this.state.host} />
+            <PaymentEditor host={this.state.host} addHandler={this.addPayment} />
             <div>
               {payments}
             </div>
