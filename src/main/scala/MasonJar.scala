@@ -1,5 +1,23 @@
 package masonjar
 
+class PaymentFilter(date: Option[Int => Boolean] = None,
+                    payer: Option[String] = None,
+                    payee: Option[String] = None,
+                    amount: Option[Double => Boolean] = None) {
+
+    private def trueOrNone(opt: Option[Boolean]): Boolean = opt match {
+        case Some(tf) => tf
+        case None => true
+    }
+
+    private def qualifier(pmt: Payment): Boolean = trueOrNone(date.map(_.apply(pmt.date))) &
+                                                   trueOrNone(payer.map(_ == pmt.payer)) &
+                                                   trueOrNone(payee.map(_ == pmt.payee)) &
+                                                   trueOrNone(amount.map(_.apply(pmt.amount)))
+
+    def apply(payments: List[(Int, Payment)]): List[(Int, Payment)] = payments.filter(it => qualifier(it._2))
+}
+
 class MasonJar() {
     private var payments: List[(Int, Payment)] = List()
     private var index: Int = -1
@@ -32,29 +50,18 @@ class MasonJar() {
         pmt
     }
 
-    def sumAmounts(start: Option[Int] = None,
-                   end: Option[Int] = None,
-                   payer: Option[String] = None,
-                   payee: Option[String] = None): Double = {
+    def aggregate[T](f: PaymentFilter)(agg: List[(Int, Payment)] => T): T = agg(f.apply(payments))
+    def sumAmounts(f: PaymentFilter): Double = aggregate(f)((lst: List[(Int, Payment)]) => lst.map(_._2.amount).sum)
 
-        def trueOrNone(opt: Option[Boolean]): Boolean = opt match {
-            case Some(tf) => tf
-            case None => true
-        }
+    // Return amount owed to one entity by another entity, provided that the first entity
+    // agrees to be responsible for a specific fraction of expenses
+    def owed(lender: String, debtor: String, fractionHandledByLender: Double): Double = {
+        val spentByLender = payments.filter(ip => ip._2.payer == lender & ip._2.payee != debtor).map(_._2.amount).sum
+        val spentByDebtor = payments.filter(ip => ip._2.payer == debtor & ip._2.payee != lender).map(_._2.amount).sum
+        val lenderToDebtor = sumAmounts(new PaymentFilter(payer=Some(lender), payee=Some(debtor)))
+        val debtorToLender = sumAmounts(new PaymentFilter(payer=Some(debtor), payee=Some(lender)))
 
-        def qualifier(pmt: Payment): Boolean = {
-            trueOrNone(start.map(_ <= pmt.date)) &
-                trueOrNone(end.map(pmt.date < _)) &
-                trueOrNone(payer.map(_ == pmt.payer)) &
-                trueOrNone(payee.map(_ == pmt.payee))
-        }
-
-        val data = payments.filter(_._2.amount > 10)
-
-        payments
-            .filter(it => qualifier(it._2))
-            .map(_._2.amount)
-            .sum
+        0.5 * (spentByLender - spentByDebtor) + lenderToDebtor - debtorToLender
     }
 
 }

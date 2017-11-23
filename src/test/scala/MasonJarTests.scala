@@ -1,6 +1,6 @@
 import org.scalatest.{FlatSpec, Matchers}
 
-import masonjar.{MasonJar, Payment}
+import masonjar.{MasonJar, Payment, PaymentFilter}
 
 class MasonJarTests extends FlatSpec with Matchers {
 
@@ -49,10 +49,10 @@ class MasonJarTests extends FlatSpec with Matchers {
         masonJar.addPayment(Payment(3, "Bob", "Charlize", 3.00))
         masonJar.addPayment(Payment(5, "Charlize", "Alice", 4.00))
 
-        masonJar.sumAmounts(payer = Some("Bob")) should be (5.0)
-        masonJar.sumAmounts(payee = Some("Alice")) should be (6.0)
-        masonJar.sumAmounts(start = Some(2), end = Some(4)) should be (4.0)
-        masonJar.sumAmounts(end = Some(3)) should be (3.0)
+        masonJar.sumAmounts(new PaymentFilter(payer = Some("Bob"))) should be (5.0)
+        masonJar.sumAmounts(new PaymentFilter(payee = Some("Alice"))) should be (6.0)
+        masonJar.sumAmounts(new PaymentFilter(date = Some((dt: Int) => dt >= 2 & dt < 4))) should be (4.0)
+        masonJar.sumAmounts(new PaymentFilter(amount = Some((amt: Double) => amt >= 3))) should be (7.0)
     }
 
 }
