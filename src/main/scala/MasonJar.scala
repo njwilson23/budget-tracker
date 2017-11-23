@@ -1,6 +1,8 @@
 package masonjar
 
-class PaymentFilter(date: Option[Int => Boolean] = None,
+import java.util.{Date}
+
+class PaymentFilter(date: Option[Date => Boolean] = None,
                     payer: Option[String] = None,
                     payee: Option[String] = None,
                     amount: Option[Double => Boolean] = None) {

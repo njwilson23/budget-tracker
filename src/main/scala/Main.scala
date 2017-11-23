@@ -12,6 +12,7 @@ import org.http4s.circe._
 import org.http4s.server.blaze.BlazeBuilder
 import org.http4s.util.StreamApp
 import masonjar.{MasonJar, Payment, PaymentID}
+import masonjar.PaymentImplicits._
 
 object Main extends StreamApp {
 
@@ -29,8 +30,8 @@ object Main extends StreamApp {
 
         // how do these lines work?
         case request @ GET -> Root => StaticFile.fromFile(new File("frontend/masonjar/build/index.html"), Some(request)).getOrElseF(NotFound())
-        case request @ GET -> Root / "static" / dirname / filename  =>
-            StaticFile.fromFile(new File(s"frontend/masonjar/build/static/$dirname/$filename"),
+        case request @ GET -> Root / "static" / dirName / fileName  =>
+            StaticFile.fromFile(new File(s"frontend/masonjar/build/static/$dirName/$fileName"),
                                 Some(request)).getOrElseF(NotFound())
 
         case GET -> Root / "payments" :? IdQueryParamMatcher(id) => Ok(getPaymentById(id))
