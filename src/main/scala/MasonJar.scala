@@ -1,8 +1,8 @@
 package masonjar
 
-import java.util.{Date}
+import java.time.LocalDate
 
-class PaymentFilter(date: Option[Date => Boolean] = None,
+class PaymentFilter(date: Option[LocalDate => Boolean] = None,
                     payer: Option[String] = None,
                     payee: Option[String] = None,
                     amount: Option[Double => Boolean] = None) {
@@ -18,6 +18,23 @@ class PaymentFilter(date: Option[Date => Boolean] = None,
                                                    trueOrNone(amount.map(_.apply(pmt.amount)))
 
     def apply(payments: List[(Int, Payment)]): List[(Int, Payment)] = payments.filter(it => qualifier(it._2))
+}
+
+object PaymentFilter {
+    def suchThat(after: Option[LocalDate] = None,
+                 before: Option[LocalDate] = None,
+                 atLeast: Option[Double] = None,
+                 under: Option[Double] = None,
+                 payer: Option[String] = None,
+                 payee: Option[String] = None): PaymentFilter = {
+
+        new PaymentFilter(
+            payer = payer,
+            payee = payee,
+            amount = Some((amt: Double) => (atLeast.isEmpty || amt >= atLeast.get) && (under.isEmpty || amt < under.get)),
+            date = Some((dt: LocalDate) => (after.isEmpty || dt.isAfter(after.get)) && (before.isEmpty || dt.isBefore(before.get)))
+        )
+    }
 }
 
 class MasonJar() {

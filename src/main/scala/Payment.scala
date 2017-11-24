@@ -1,9 +1,9 @@
 package masonjar
 
 import io.circe._
-import java.util.{Date}
+import java.time.LocalDate
 
-case class Payment(date: Date, payer: String, payee: String, amount: Double)
+case class Payment(date: LocalDate, payer: String, payee: String, amount: Double)
 
 case class PaymentID(id: Int)
 
@@ -23,7 +23,7 @@ object PaymentImplicits {
             payee <- c.downField("payee").as[String]
             dateStr <- c.downField("date").as[String]
             amount <- c.downField("amount").as[Double]
-        } yield Payment(new Date(dateStr), payer, payee, amount)
+        } yield Payment(LocalDate.parse(dateStr), payer, payee, amount)
     }
 
 }
