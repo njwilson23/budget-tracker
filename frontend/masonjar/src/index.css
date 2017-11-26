@@ -5,29 +5,77 @@ body {
 }
 
 div.payment {
-/*   width: 30%; */
-/*   text-align: left; */
+  padding: 0.3em;
   margin: auto;
+  display: flex;
+  -webkit-transition-duration: 0.1s;
+       -o-transition-duration: 0.1s;
+          transition-duration: 0.1s;
 }
 
-button.delete {
-  background: grey;
-  border-radius: 20px;
-  border-width: 0px;
-  text-align: center;
+div.payment:hover {
+  background: #eeeeee;
+  -webkit-transition-duration: 0.1s;
+       -o-transition-duration: 0.1s;
+          transition-duration: 0.1s;
+}
+
+.paymentString {
+  flex-grow: 1;
+}
+
+.paymentDelete {
+  border-radius: 5px;
+  padding: 0.3em;
+  background: firebrick;
   color: white;
   -webkit-transition-duration: 0.5s;
        -o-transition-duration: 0.5s;
           transition-duration: 0.5s;
 }
 
-button.delete:hover {
+.paymentDelete:hover {
   background: whitesmoke;
   color: firebrick;
+  cursor: pointer;
   -webkit-transition-duration: 0.2s;
        -o-transition-duration: 0.2s;
           transition-duration: 0.2s;
 }
+
+button.delete:hover {
+}
+
+.container {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+}
+
+.editorContainer {
+  text-align: left;
+  margin: 1em;
+}
+
+.paymentList {
+  text-align: left;
+  margin: 1em;
+  flex-grow: 1;
+  flex-shrink: 1;
+}
+
+.paymentList .even {
+  background: #aaaaaa;
+}
+
+.paymentList .odd {
+  background: white;
+}
+
+.columnBottom {
+  clear: both;
+}
+
 
 .App-header {
   height: 50px;
