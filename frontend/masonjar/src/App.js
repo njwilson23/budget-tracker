@@ -1,13 +1,19 @@
 import React, { Component } from 'react';
-//import logo from './logo.svg';
 import './App.css';
 
 function Payment(props) {
+
+    function fmtMoney(amt) {
+        let str = String(amt * 100),
+            n = str.length;
+        return "$" + str.slice(0, n-2) + "." + str.slice(n-2, n);
+    }
+
     let cls = (props.idx % 2 === 0) ? "payment even" : "payment odd",
         pmt = props.payment,
-        displayString = pmt.date + ": " + pmt.payer + " paid " + pmt.payee + " $" + pmt.amount;
+        displayString = pmt.date + ": " + pmt.payer + " paid " + pmt.payee + " " + fmtMoney(pmt.amount);
     return (
-        <div className={cls}>
+        <div className={cls} onClick={props.onClick}>
             <div className="paymentString">{displayString}
                 <span className="flexSpace"></span>
             </div>
@@ -24,58 +30,50 @@ class PaymentEditor extends Component {
             "date": "",
             "payer": "",
             "payee": "",
-            "amount": 0.00,
-            "host": props.host
+            "amount": 0.00
         }
 
-        this.addHandler = props.addHandler;
+        this.values = props.values;
 
-        this.handleDateChange = this.handleDateChange.bind(this);
-        this.handlePayerChange = this.handlePayerChange.bind(this);
-        this.handlePayeeChange = this.handlePayeeChange.bind(this);
-        this.handleAmountChange = this.handleAmountChange.bind(this);
+        this.addHandler = props.addHandler;
+        this.dateSetter = props.dateSetter;
+        this.payeeSetter = props.payeeSetter;
+        this.payerSetter = props.payerSetter;
+        this.amtSetter = props.amtSetter;
+
         this.handleSubmit = this.handleSubmit.bind(this);
     }
 
-    handleDateChange(ev) {
-        this.setState({"date": ev.target.value});
-    }
-
-    handlePayerChange(ev) {
-        this.setState({"payer": ev.target.value});
-    }
-
-    handlePayeeChange(ev) {
-        this.setState({"payee": ev.target.value});
-    }
-
-    handleAmountChange(ev) {
-        this.setState({"amount": ev.target.value});
-    }
-
     handleSubmit(ev) {
-        this.addHandler(this.state)
+        this.addHandler(this.values)
         ev.preventDefault()
     }
 
     render() {
-        let owes = "(Not sure who owes what)";
         return (
             <form onSubmit={this.handleSubmit}>
-                <label><br/>Date:<input type="date"
-                                value={this.state.date}
-                                onChange={this.handleDateChange}/></label>
-                <label><br/>Payer:<input type="text"
-                                value={this.state.payer}
-                                onChange={this.handlePayerChange}/></label>
-                <label><br/>Payee:<input type="text"
-                                value={this.state.payee}
-                                onChange={this.handlePayeeChange}/></label>
-                <label><br/>Amount:<input type="text"
-                                value={this.state.amount}
-                                onChange={this.handleAmountChange}/></label>
+                <label><br/>Date:
+                    <input type="date"
+                           value={this.values.date}
+                           onChange={(ev) => this.dateSetter(ev.target.value)}/>
+                </label>
+                <label><br/>Payer:
+                    <input type="text"
+                           value={this.values.payer}
+                           onChange={(ev) => this.payerSetter(ev.target.value)}/>
+                </label>
+                <label><br/>Payee:
+                    <input type="text"
+                           value={this.values.payee}
+                           onChange={(ev) => this.payeeSetter(ev.target.value)}/>
+                </label>
+                <label><br/>Amount:
+                    <input type="text"
+                           value={this.values.amount}
+                           onChange={(ev) => this.amtSetter(ev.target.value)}/>
+                </label>
                 <br/><input type="submit" value="Add receipt"/>
-                <br/><p>{owes}</p>
+                <br/><button>Settle</button>
             </form>);
     }
 }
@@ -86,7 +84,13 @@ class App extends Component {
         super(props)
         this.state = {
             "payments": [],
-            "host": "http://localhost:8080"
+            "host": "http://localhost:8080",
+            "editor": {
+                "date": "",
+                "payer": "",
+                "payee": "",
+                "amount": 0.0
+            }
         }
 
         // Populate payment list
@@ -101,6 +105,7 @@ class App extends Component {
 
         this.addPayment = this.addPayment.bind(this)
         this.deletePayment = this.deletePayment.bind(this)
+        this.setValues = this.setValues.bind(this)
     }
 
     addPayment(pmt) {
@@ -127,6 +132,19 @@ class App extends Component {
         req.send(JSON.stringify({"id": id}));
     }
 
+    setValues(pmt) {
+        this.setState({"payer": pmt.payer,
+                       "payee": pmt.payee,
+                       "amount": pmt.amount,
+                       "date": pmt.date});
+    }
+
+    updateEditor(key, value) {
+        let editor = this.state.editor;
+        editor[key] = value;
+        this.setState({"editor": editor});
+    }
+
     render() {
         let payments = this.state.payments.slice()
         payments.sort(
@@ -137,6 +155,7 @@ class App extends Component {
                      idx={idx}
                      payment={pmt[1]}
                      deleteHandler={(e) => this.deletePayment(pmt[0])}
+                     onClick={(e) => this.setValues(pmt[1])}
              />
         );
         return (
@@ -147,7 +166,11 @@ class App extends Component {
             <div className="container">
                 <div className="editorContainer">
                     <PaymentEditor
-                        host={this.state.host}
+                        values={this.state.editor}
+                        dateSetter={(date) => this.updateEditor("date", date)}
+                        payerSetter={(payer) => this.updateEditor("payer", payer)}
+                        payeeSetter={(payee) => this.updateEditor("payee", payee)}
+                        amtSetter={(amt) => this.updateEditor("amount", amt)}
                         addHandler={this.addPayment} />
                 </div>
                 <div className="paymentList">
