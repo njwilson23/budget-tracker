@@ -8,6 +8,7 @@ import fs2.{Stream, Task}
 import fs2.interop.cats._
 import org.http4s._
 import org.http4s.dsl._
+import org.http4s.server.middleware._
 import org.http4s.circe._
 import org.http4s.server.blaze.BlazeBuilder
 import org.http4s.util.StreamApp
@@ -29,7 +30,9 @@ object Main extends StreamApp {
     val paymentService = HttpService {
 
         // how do these lines work?
-        case request @ GET -> Root => StaticFile.fromFile(new File("frontend/masonjar/build/index.html"), Some(request)).getOrElseF(NotFound())
+        case request @ GET ->
+            Root => StaticFile.fromFile(new File("frontend/masonjar/build/index.html"), Some(request)).getOrElseF(NotFound())
+
         case request @ GET -> Root / "static" / dirName / fileName  =>
             StaticFile.fromFile(new File(s"frontend/masonjar/build/static/$dirName/$fileName"),
                                 Some(request)).getOrElseF(NotFound())
@@ -67,7 +70,7 @@ object Main extends StreamApp {
     override def stream(args: List[String]): Stream[Task, Nothing] = {
         BlazeBuilder
             .bindHttp(8080, "localhost")
-            .mountService(paymentService, "/")
+            .mountService(CORS(paymentService), "/")
             .serve
     }
 
