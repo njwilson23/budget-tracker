@@ -51,7 +51,7 @@ div.payment:hover {
 button.delete:hover {
 }
 
-.container {
+.flexContainer {
   display: -ms-flexbox;
   display: flex;
   -ms-flex-direction: row;
