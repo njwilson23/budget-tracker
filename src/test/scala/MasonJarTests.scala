@@ -69,4 +69,17 @@ class MasonJarTests extends FlatSpec with Matchers {
         masonJar.sumAmounts(PaymentFilter.suchThat(atLeast = Some(2.99))) should be (7.0)
     }
 
+    "A MasonJar" should "permit filtering by date ranges" in {
+        val masonJar = new MasonJar()
+        masonJar.addPayment(Payment(LocalDate.of(2015, 4, 7), "Alice", "Bob", 1.00))
+        masonJar.addPayment(Payment(LocalDate.of(2015, 4, 9), "Bob", "Alice", 2.00))
+        masonJar.addPayment(Payment(LocalDate.of(2015, 4, 10), "Bob", "Charlize", 3.00))
+        masonJar.addPayment(Payment(LocalDate.of(2015, 4, 12), "Charlize", "Alice", 4.00))
+
+        masonJar.getPayments(PaymentFilter.suchThat(after=Some(LocalDate.of(2015, 4, 9)))).length should be (2)
+        masonJar.getPayments(PaymentFilter.suchThat(before=Some(LocalDate.of(2015, 4, 9)))).length should be (1)
+        masonJar.getPayments(PaymentFilter.suchThat(after=Some(LocalDate.of(2015, 4, 8)),
+                                                    before=Some(LocalDate.of(2015, 4, 11)))).length should be (2)
+    }
+
 }

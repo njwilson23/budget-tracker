@@ -1,6 +1,7 @@
 package server
 
 import java.io.File
+import java.time.LocalDate
 
 import io.circe.generic.auto._
 import io.circe.syntax._
@@ -12,7 +13,7 @@ import org.http4s.server.middleware._
 import org.http4s.circe._
 import org.http4s.server.blaze.BlazeBuilder
 import org.http4s.util.StreamApp
-import masonjar.{MasonJar, Payment, PaymentID}
+import masonjar.{MasonJar, Payment, PaymentID, PaymentFilter}
 import masonjar.PaymentImplicits._
 
 object Main extends StreamApp {
@@ -20,8 +21,12 @@ object Main extends StreamApp {
     // State object
     val payments = new MasonJar()
 
+    implicit val dateQueryParamDecoder: QueryParamDecoder[LocalDate] = QueryParamDecoder[String].map(LocalDate.parse)
+
     // Define a matcher to extract payment IDs from URLs
-    object IdQueryParamMatcher extends QueryParamDecoderMatcher[Int]("id")
+    //object IdQueryParamMatcher extends QueryParamDecoderMatcher[Int]("id")
+    object AfterDateQueryParam extends QueryParamDecoderMatcher[LocalDate]("after")
+    object BeforeDateQueryParam extends QueryParamDecoderMatcher[LocalDate]("before")
 
     // Extract a payment option as a string or return an empty string
     def getPaymentById(id: Int): String = payments.getPayment(id).map(_.toString) getOrElse s"no such payment (id=$id)"
@@ -37,16 +42,22 @@ object Main extends StreamApp {
             StaticFile.fromFile(new File(s"frontend/masonjar/build/static/$dirName/$fileName"),
                                 Some(request)).getOrElseF(NotFound())
 
-        case GET -> Root / "payments" :? IdQueryParamMatcher(id) => Ok(getPaymentById(id))
+        case GET -> Root / "payments" :? AfterDateQueryParam(after) +& BeforeDateQueryParam(before) =>
+            val paymentList: List[(Int, Payment)] = payments
+                .getPayments(PaymentFilter.suchThat(after=Some(after), before=Some(before)))
+                .sortWith(_._1 < _._1)
+            Ok(paymentList.asJson)
 
         case GET -> Root / "payments" / "count" => Ok(payments.length.toString)
 
+        case GET -> Root / "payments" / "owed" / lender / debtor => Ok(payments.owed(lender, debtor, 0.5).asJson)
+
         // this is temporary, and will be replaced by improving the /payments endpoint
-        case GET -> Root / "payments" / "all" =>
-            val paymentList: List[(Int, Payment)] = payments
-                .getAllPayments
-                .sortWith(_._1 < _._1)
-            Ok(paymentList.asJson)
+        //case GET -> Root / "payments" / "all" =>
+        //    val paymentList: List[(Int, Payment)] = payments
+        //        .getAllPayments
+        //        .sortWith(_._1 < _._1)
+        //    Ok(paymentList.asJson)
 
         case request @ POST -> Root / "payments" / "add" =>
             // Somehow 400 (BadRequest) automatically emitted when the JSON is invalid
@@ -63,6 +74,8 @@ object Main extends StreamApp {
                     case Some(pmt) => Ok(pmt.asJson)
                 }
             } yield resp
+
+        case GET -> Root / "payments" / IntVar(paymentId) => Ok(getPaymentById(paymentId))
 
         case GET -> Root / "payments" / _ => Forbidden()
     }

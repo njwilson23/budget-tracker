@@ -59,6 +59,8 @@ class MasonJar() {
 
     def getPayment(index: Int): Option[Payment] = _getPaymentByIndex(index, payments)
 
+    def getPayments(f: PaymentFilter): List[(Int, Payment)] = f(payments)
+
     def getAllPayments: List[(Int, Payment)] = payments
 
     def popPayment(index: Int): Option[Payment] = {
@@ -74,13 +76,14 @@ class MasonJar() {
 
     // Return amount owed to one entity by another entity, provided that the first entity
     // agrees to be responsible for a specific fraction of expenses
-    def owed(lender: String, debtor: String, fractionHandledByLender: Double): Double = {
+    def owed(lender: String, debtor: String, fractionHandledByLender: Double): Imbalance = {
         val spentByLender = payments.filter(ip => ip._2.payer == lender & ip._2.payee != debtor).map(_._2.amount).sum
         val spentByDebtor = payments.filter(ip => ip._2.payer == debtor & ip._2.payee != lender).map(_._2.amount).sum
         val lenderToDebtor = sumAmounts(new PaymentFilter(payer=Some(lender), payee=Some(debtor)))
         val debtorToLender = sumAmounts(new PaymentFilter(payer=Some(debtor), payee=Some(lender)))
+        val totalSpent = spentByDebtor + spentByLender
 
-        0.5 * (spentByLender - spentByDebtor) + lenderToDebtor - debtorToLender
+        Imbalance(lender, debtor, 0.5 * (totalSpent) + lenderToDebtor - debtorToLender)
     }
 
 }
