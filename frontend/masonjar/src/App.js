@@ -4,7 +4,7 @@ import './App.css';
 function Payment(props) {
 
     let fmtMoney = amt => {
-        let str = String(amt * 100),
+        let str = String(Math.round(amt * 100, 0)),
             n = str.length;
         return "$" + str.slice(0, n-2) + "." + str.slice(n-2, n)
     };
@@ -21,7 +21,7 @@ function Payment(props) {
             <div className="paymentString">{displayString}
                 <span className="flexSpace"></span>
             </div>
-            <div className="paymentDelete" onClick={props.deleteHandler}>{"Cancel"}</div>
+            <div className="paymentDelete button" onClick={props.deleteHandler}>{"Cancel"}</div>
         </div>
     )
 }
@@ -80,11 +80,46 @@ function PaymentEditor(props) {
 
 }
 
+function MonthBrowser(props) {
+    return (
+        <div className="monthBrowser">
+            <div className="navButton button" onClick={props.prev}>Previous month</div>
+            <div className="navButton button" onClick={props.next}>Next month</div>
+        </div>
+    );
+}
+
 function fmtDate(dt) {
     let lpad = a => "0".repeat(Math.max(0, 2 - String(a).length)) + String(a)
-    return String(dt.getYear() + 1900) +
+    let result = String(dt.getFullYear()) +
             "-" + lpad(dt.getMonth()+1) +
             "-" + lpad(dt.getDate());
+    console.log(result);
+    return result;
+}
+
+function prevMonth(dt) {
+    const yr = dt.getFullYear(),
+          mo = dt.getMonth();
+    return new Date((mo === 0) ? yr - 1 : yr,
+                    (mo === 0) ? 12 : mo - 1,
+                    1);
+}
+
+function nextMonth(dt) {
+    const yr = dt.getFullYear(),
+          mo = dt.getMonth();
+    return new Date((mo === 11) ? yr + 1 : yr,
+                    (mo === 11) ? 0 : mo + 1,
+                    1);
+}
+
+function firstOfMonth(dt) {
+    return new Date(dt.getFullYear(), dt.getMonth(), 1);
+}
+
+function lastOfMonth(dt) {
+    return new Date(dt.getFullYear(), dt.getMonth() + 1, 0);
 }
 
 class App extends Component {
@@ -101,22 +136,52 @@ class App extends Component {
                 "payer": "",
                 "payee": "",
                 "amount": 0.0
-            }
+            },
+            "year": currentDate.getFullYear(),
+            "month": currentDate.getMonth()
         }
 
         this.addPayment = this.addPayment.bind(this);
         this.deletePayment = this.deletePayment.bind(this);
         this.updateEditor = this.updateEditor.bind(this);
+        this.changeMonth = this.changeMonth.bind(this);
+        this.getPayments = this.getPayments.bind(this);
 
+        this.getPayments(currentDate);
+    }
+
+    getPayments(dt) {
         // Populate payment list
         let req = new XMLHttpRequest();
-        req.open("GET", this.state.host + "/payments/all", true);
+        console.log(dt)
+        req.open("GET", this.state.host +
+                    "/payments?after=" +
+                    fmtDate(lastOfMonth(prevMonth(dt)))+
+                    "&before=" +
+                    fmtDate(firstOfMonth(nextMonth(dt))), true);
         req.onreadystatechange = () => {
             if (req.readyState === XMLHttpRequest.DONE && req.status === 200) {
                 this.setState({"payments": JSON.parse(req.responseText)});
             }
         }
         req.send();
+    }
+
+    changeMonth(direction) {
+        let newMonth = this.state.month + direction,
+            newYear = this.state.year;
+        if (newMonth === -1) {
+            newMonth = 11;
+            newYear--
+        } else if (newMonth === 12) {
+            newMonth = 0;
+            newYear++
+        }
+        this.setState({
+            "month": newMonth,
+            "year": newYear
+        });
+        this.getPayments(new Date(newYear, newMonth, 1));
     }
 
     addPayment(pmt) {
@@ -176,6 +241,9 @@ class App extends Component {
                                          "amount": pmt.amount}})}
                 />
             </div>
+            <MonthBrowser prev={() => this.changeMonth(-1)}
+                          next={() => this.changeMonth(1)}
+            />
           </div>
         );
     }
