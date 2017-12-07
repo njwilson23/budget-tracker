@@ -44,11 +44,6 @@ div.button:hover {
           transition-duration: 0.2s;
 }
 
-.paymentDelete {
-  background: firebrick;
-  color: white;
-}
-
 
 .navButton {
   background: steelblue;
@@ -61,8 +56,13 @@ div.button:hover {
   color: black;
 }
 
+.paymentDelete {
+  background: firebrick;
+  color: white;
+}
+
 .paymentDelete:hover {
-  background: whitesmoke;
+  background: darksalmon;
   color: firebrick;
 }
 

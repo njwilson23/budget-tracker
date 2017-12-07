@@ -82,4 +82,23 @@ class MasonJarTests extends FlatSpec with Matchers {
                                                     before=Some(LocalDate.of(2015, 4, 11)))).length should be (2)
     }
 
+    "A MasonJar" should "indicate the payment required to settle balances" in {
+        val masonJar = new MasonJar()
+        masonJar.addPayment(Payment(LocalDate.of(2015, 4, 7), "Alice", "Store", 1.00))
+        masonJar.addPayment(Payment(LocalDate.of(2015, 4, 9), "Bob", "Store", 2.00))
+        masonJar.addPayment(Payment(LocalDate.of(2015, 4, 10), "Bob", "Store", 3.00))
+
+        val settlement = masonJar.owed("Alice", "Bob")
+        settlement.payer should be ("Alice")
+        settlement.payee should be ("Bob")
+        settlement.amount should be (2.0)
+
+        masonJar.addPayment(Payment(LocalDate.of(2015, 4, 12), "Alice", "Bob", 3.00))
+
+        val settlement2 = masonJar.owed("Alice", "Bob")
+        settlement2.payer should be ("Alice")
+        settlement2.payee should be ("Bob")
+        settlement2.amount should be (-1.0)
+    }
+
 }
