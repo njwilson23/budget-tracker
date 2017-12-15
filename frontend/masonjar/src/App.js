@@ -51,7 +51,6 @@ function PaymentEditor(props) {
         ev.preventDefault();
     }
 
-
     return (
         <div className="editorContainer"><form onSubmit={handleSubmit}>
             <label><br/>Date:
@@ -190,7 +189,7 @@ class App extends Component {
         req.onreadystatechange = () => {
             if (req.readyState === XMLHttpRequest.DONE && req.status === 200) {
                 this.setState({"payments":
-                               this.state.payments.concat([[Number(req.responseText), pmt]])});
+                               this.state.payments.concat([[Number(req.responseText), Object.assign({}, pmt)]])});
             }
         }
         req.send(JSON.stringify(pmt));
