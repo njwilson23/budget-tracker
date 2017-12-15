@@ -1,7 +1,8 @@
 import org.scalatest.{FlatSpec, Matchers}
-
 import java.time.LocalDate
+
 import masonjar.{MasonJar, Payment, PaymentFilter}
+import org.specs2.text.AddedLine
 
 class MasonJarTests extends FlatSpec with Matchers {
 
@@ -99,6 +100,20 @@ class MasonJarTests extends FlatSpec with Matchers {
         settlement2.payer should be ("Alice")
         settlement2.payee should be ("Bob")
         settlement2.amount should be (-1.0)
+    }
+
+    "A MasonJar" should "determine debts among multiple payers" in {
+        val masonJar = new MasonJar()
+        masonJar.addPayment(Payment(LocalDate.of(2015, 4, 7), "Alice", "Store", 1.00))
+        masonJar.addPayment(Payment(LocalDate.of(2015, 4, 9), "Bob", "Store", 2.00))
+        masonJar.addPayment(Payment(LocalDate.of(2015, 4, 10), "Cassandra", "Store", 3.00))
+
+        val debts = masonJar.allDebts()
+        val balanceA = 1.0 + debts.filter(_.payer == "Alice").map(_.amount).sum - debts.filter(_.payee == "Alice").map(_.amount).sum
+        val balanceB = 2.0 + debts.filter(_.payer == "Bob").map(_.amount).sum - debts.filter(_.payee == "Bob").map(_.amount).sum
+        val balanceC = 3.0 + debts.filter(_.payer == "Cassandra").map(_.amount).sum - debts.filter(_.payee == "Cassandra").map(_.amount).sum
+        balanceA should be (balanceB)
+        balanceB should be (balanceC)
     }
 
 }

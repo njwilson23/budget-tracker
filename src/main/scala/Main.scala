@@ -28,6 +28,10 @@ object Main extends StreamApp {
     object AfterDateQueryParam extends QueryParamDecoderMatcher[LocalDate]("after")
     object BeforeDateQueryParam extends QueryParamDecoderMatcher[LocalDate]("before")
 
+    object LenderQueryParam extends QueryParamDecoderMatcher[String]("from")
+    object DebtorQueryParam extends QueryParamDecoderMatcher[String]("to")
+    object SplitFractionQueryParam extends QueryParamDecoderMatcher[Double]("splitFraction")
+
     // Extract a payment option as a string or return an empty string
     def getPaymentById(id: Int): String = payments.getPayment(id).map(_.toString) getOrElse s"no such payment (id=$id)"
 
@@ -50,14 +54,11 @@ object Main extends StreamApp {
 
         case GET -> Root / "payments" / "count" => Ok(payments.length.toString)
 
-        case GET -> Root / "payments" / "owed" / lender / debtor => Ok(payments.owed(lender, debtor, 0.5).asJson)
+        case GET -> Root / "payments" / "owed" :? LenderQueryParam(from) +& DebtorQueryParam(to) =>
+            Ok(payments.owed(from, to).asJson)
 
-        // this is temporary, and will be replaced by improving the /payments endpoint
-        //case GET -> Root / "payments" / "all" =>
-        //    val paymentList: List[(Int, Payment)] = payments
-        //        .getAllPayments
-        //        .sortWith(_._1 < _._1)
-        //    Ok(paymentList.asJson)
+        case GET -> Root / "payments" / "owed" :? LenderQueryParam(from) +& DebtorQueryParam(to) +& SplitFractionQueryParam(split) =>
+            Ok(payments.owed(from, to, split).asJson)
 
         case request @ POST -> Root / "payments" / "add" =>
             // Somehow 400 (BadRequest) automatically emitted when the JSON is invalid
