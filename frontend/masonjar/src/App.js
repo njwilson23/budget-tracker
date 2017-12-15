@@ -74,9 +74,7 @@ function PaymentEditor(props) {
                        onChange={ev => props.amtSetter(ev.target.value)}/>
             </label>
             <br/><input type="submit" value="Add receipt"/>
-            <br/><button>Settle</button>
-        </form></div>);
-
+        </form><button onClick={props.settle}>Settle</button></div>);
 }
 
 function MonthBrowser(props) {
@@ -93,7 +91,6 @@ function fmtDate(dt) {
     let result = String(dt.getFullYear()) +
             "-" + lpad(dt.getMonth()+1) +
             "-" + lpad(dt.getDate());
-    console.log(result);
     return result;
 }
 
@@ -145,6 +142,7 @@ class App extends Component {
         this.updateEditor = this.updateEditor.bind(this);
         this.changeMonth = this.changeMonth.bind(this);
         this.getPayments = this.getPayments.bind(this);
+        this.getOwed = this.getOwed.bind(this);
 
         this.getPayments(currentDate);
     }
@@ -152,7 +150,6 @@ class App extends Component {
     getPayments(dt) {
         // Populate payment list
         let req = new XMLHttpRequest();
-        console.log(dt)
         req.open("GET", this.state.host +
                     "/payments?after=" +
                     fmtDate(lastOfMonth(prevMonth(dt)))+
@@ -188,8 +185,11 @@ class App extends Component {
         req.open("POST", this.state.host + "/payments/add", true);
         req.onreadystatechange = () => {
             if (req.readyState === XMLHttpRequest.DONE && req.status === 200) {
-                this.setState({"payments":
-                               this.state.payments.concat([[Number(req.responseText), Object.assign({}, pmt)]])});
+                let pmtId = Number(req.responseText);
+                let pmtCopy = Object.assign({}, pmt);
+                this.setState(
+                    {"payments": this.state.payments.concat([[pmtId, pmtCopy]])}
+                );
             }
         }
         req.send(JSON.stringify(pmt));
@@ -213,6 +213,20 @@ class App extends Component {
         let editor = this.state.editor;
         editor[key] = value;
         this.setState({"editor": editor});
+    }
+
+    getOwed(debtor, lender) {
+        // Populate payment list
+        let req = new XMLHttpRequest();
+        req.open("GET", this.state.host +
+                    "/payments/owed?from=" + debtor +
+                    "&to=" + lender, true);
+        req.onreadystatechange = () => {
+            if (req.readyState === XMLHttpRequest.DONE && req.status === 200) {
+                console.log(req.responseText);
+            }
+        }
+        req.send();
     }
 
     render() {
