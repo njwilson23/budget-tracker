@@ -2,7 +2,6 @@ import org.scalatest.{FlatSpec, Matchers}
 import java.time.LocalDate
 
 import masonjar._
-import org.specs2.text.AddedLine
 
 class MasonJarTests extends FlatSpec with Matchers {
 
@@ -25,7 +24,7 @@ class MasonJarTests extends FlatSpec with Matchers {
         payee should be("Britannia Sushi")
         masonJar.length should be(2)
 
-        val payee2 = masonJar.popPayment(idx).map(_.payee) getOrElse "missing"
+        val payee2 = masonJar.pop(idx).map(_.payee) getOrElse "missing"
         payee2 should be("Britannia Sushi")
         masonJar.length should be(1)
     }
@@ -37,8 +36,8 @@ class MasonJarTests extends FlatSpec with Matchers {
         masonJar.add(Payment(LocalDate.of(2015, 4, 7), "Alice", "Britannia Sushi", 12.50))
 
         // create a hole
-        masonJar.popPayment(idx)
-        masonJar.popPayment(idx) should be (None)
+        masonJar.pop(idx)
+        masonJar.pop(idx) should be (None)
     }
 
     "A MasonJar" should "be summable by criteria" in {
@@ -48,10 +47,10 @@ class MasonJarTests extends FlatSpec with Matchers {
         masonJar.add(Payment(LocalDate.of(2015, 4, 10), "Bob", "Charlize", 3.00))
         masonJar.add(Payment(LocalDate.of(2015, 4, 10), "Charlize", "Alice", 4.00))
 
-        masonJar.sumAmounts(PaidBy("Bob")) should be (5.0)
-        masonJar.sumAmounts(PaidTo("Alice")) should be (6.0)
-        masonJar.sumAmounts(PaidAfter(LocalDate.of(2015, 4, 8))) should be (9.0)
-        masonJar.sumAmounts(AtLeast(3.0)) should be (7.0)
+        masonJar.tally(PaidBy("Bob")) should be (5.0)
+        masonJar.tally(PaidTo("Alice")) should be (6.0)
+        masonJar.tally(PaidAfter(LocalDate.of(2015, 4, 8))) should be (9.0)
+        masonJar.tally(AtLeast(3.0)) should be (7.0)
     }
 
     "A MasonJar" should "permit filtering by date ranges" in {
@@ -97,6 +96,49 @@ class MasonJarTests extends FlatSpec with Matchers {
         val balanceC = 3.0 + debts.filter(_.payer == "Cassandra").map(_.amount).sum - debts.filter(_.payee == "Cassandra").map(_.amount).sum
         balanceA should be (balanceB)
         balanceB should be (balanceC)
+    }
+
+}
+
+class FilterTests extends FlatSpec with Matchers {
+
+    "A UnaryFilter" should "filter a List of Payments" in {
+
+        val payments = List(
+            Payment(LocalDate.of(2017, 12, 1), "Alice", "Bob", 1.0),
+            Payment(LocalDate.of(2017, 12, 2), "Alice", "Bob", 0.5),
+            Payment(LocalDate.of(2017, 12, 4), "Alice", "Dani", 2.0),
+            Payment(LocalDate.of(2017, 12, 4), "Bob", "Charlize", 4.25)
+        ).filter(PaidBy("Alice").test)
+
+        payments.length should be (3)
+    }
+
+    "A UnaryFilter" should "be composable" in {
+
+        val payments = List(
+            Payment(LocalDate.of(2017, 12, 1), "Alice", "Bob", 1.0),
+            Payment(LocalDate.of(2017, 12, 2), "Alice", "Bob", 0.5),
+            Payment(LocalDate.of(2017, 12, 4), "Alice", "Dani", 2.0),
+            Payment(LocalDate.of(2017, 12, 4), "Bob", "Charlize", 4.25)
+        ).filter((PaidBy("Alice") + AtLeast(1.0)).test)
+
+        payments.length should be (2)
+    }
+
+    "A UnaryFilter" should "be associative" in {
+
+        val payments = List(
+            Payment(LocalDate.of(2017, 12, 1), "Alice", "Bob", 1.0),
+            Payment(LocalDate.of(2017, 12, 2), "Alice", "Bob", 0.5),
+            Payment(LocalDate.of(2017, 12, 4), "Alice", "Dani", 2.0),
+            Payment(LocalDate.of(2017, 12, 4), "Bob", "Charlize", 4.25)
+        )
+
+        val subset1 = payments.filter((PaidBy("Alice") + (AtLeast(0.25) + PaidTo("Bob"))).test)
+        val subset2 = payments.filter(((PaidBy("Alice") + AtLeast(0.25)) + PaidTo("Bob")).test)
+
+        subset1.zip(subset2).map(a => a._1 == a._2).map(if (_) 1 else 0).sum should be (2)
     }
 
 }

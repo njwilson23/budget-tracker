@@ -2,14 +2,13 @@ package masonjar
 
 import java.time.LocalDate
 
-trait Filter {
+trait Testable {
     def test(pmt: Payment): Boolean
+    def unary_!(): Testable = p => !test(p)
 }
 
-trait UnaryFilter extends Filter {
-    def +(that: UnaryFilter): CompositeFilter = CompositeFilter(List(this, that))
-
-    def test(pmt: Payment): Boolean
+abstract class UnaryFilter extends Testable {
+    def +(that: Testable): CompositeFilter = CompositeFilter(List(this, that))
 }
 
 final case class PaidAfter(dt: LocalDate) extends UnaryFilter {
@@ -36,15 +35,12 @@ final case class PaidTo(payee: String) extends UnaryFilter {
     def test(pmt: Payment): Boolean = pmt.payee == payee
 }
 
-case class CompositeFilter(steps: List[Filter]) extends Filter {
+final case class PaymentIDEquals(id: Int) extends UnaryFilter {
+    def test(pmt: Payment): Boolean = pmt.id.getOrElse(id + 1) == id
+}
 
-    val rules: List[Filter] = steps
-
+case class CompositeFilter(steps: List[Testable]) extends Testable {
+    val rules: List[Testable] = steps
     def test(pmt: Payment): Boolean = steps.map(_.test(pmt)).reduce(_ & _)
-
-    def apply(payments: List[Payment]): List[Payment] = payments.filter(test)
-
-    def +(filter: CompositeFilter): CompositeFilter = CompositeFilter(steps ++ filter.rules)
-
-    def ::(step: UnaryFilter): CompositeFilter = CompositeFilter(step :: steps)
+    def +(filter: Testable): CompositeFilter = CompositeFilter(filter :: steps)
 }

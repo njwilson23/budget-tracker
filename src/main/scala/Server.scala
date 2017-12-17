@@ -3,18 +3,18 @@ package server
 import java.io.File
 import java.time.LocalDate
 
+import fs2.interop.cats._
+import fs2.{Stream, Task}
 import io.circe.generic.auto._
 import io.circe.syntax._
-import fs2.{Stream, Task}
-import fs2.interop.cats._
-import org.http4s._
-import org.http4s.dsl._
-import org.http4s.server.middleware._
-import org.http4s.circe._
-import org.http4s.server.blaze.BlazeBuilder
-import org.http4s.util.StreamApp
-import masonjar._
 import masonjar.PaymentImplicits._
+import masonjar._
+import org.http4s._
+import org.http4s.circe._
+import org.http4s.dsl._
+import org.http4s.server.blaze.BlazeBuilder
+import org.http4s.server.middleware._
+import org.http4s.util.StreamApp
 
 object Server extends StreamApp {
 
@@ -70,7 +70,7 @@ object Server extends StreamApp {
         case request @ POST -> Root / "payments" / "delete" =>
             for {
                 data <- request.as(jsonOf[PaymentID])
-                resp <- payments.popPayment(data.id) match {
+                resp <- payments.pop(data.id) match {
                     case None => NotFound(data.id.toString)
                     case Some(pmt) => Ok(pmt.asJson)
                 }
