@@ -6,37 +6,33 @@ class MasonJar() {
     private var payments: List[Payment] = List()
     private var index: Int = -1
 
+    private def getByIndex(index: Int, payments: List[Payment]): Option[Payment] = payments match {
+        case List() => None
+        case fst :: _ if fst.id.getOrElse(index+1) == index => Some(fst)
+        case _ :: rest => getByIndex(index, rest)
+    }
+
     def length: Int = payments.length
 
-    def addPayment(pmt: Payment): Int = {
+    def add(pmt: Payment): Int = {
         index = index + 1
-        payments = Payment(pmt.date, pmt.payer, pmt.payee, pmt.amount, index) :: payments
+        payments = Payment(pmt.date, pmt.payer, pmt.payee, pmt.amount, Some(index)) :: payments
         index
     }
 
-    def _getPaymentByIndex(index: Int, payments: List[Payment]): Option[Payment] ={
-        if (payments.isEmpty) None
-        else if (payments.head.id == index) Some(payments.head)
-        else _getPaymentByIndex(index, payments.tail)
-    }
+    def index(index: Int): Option[Payment] = getByIndex(index, payments)
 
-    def getPayment(index: Int): Option[Payment] = _getPaymentByIndex(index, payments)
+    def search(filter: CompositeFilter): List[Payment] = filter(payments)
 
-    def getPayments(filter: Filter): List[Payment] = filter(payments)
-
-    def getAllPayments: List[Payment] = payments
+    def allPayments: List[Payment] = payments
 
     def popPayment(index: Int): Option[Payment] = {
-        val pmt = _getPaymentByIndex(index, payments)
-        if (pmt.isDefined) {
-            payments = payments.filter(_.id != index)
-        }
+        val pmt = getByIndex(index, payments)
+        payments = payments.filter(p => p.id.getOrElse(index + 1) != index)
         pmt
     }
 
-    def aggregate[T](f: Filter)(agg: List[Payment] => T): T = agg(f(payments))
-
-    def sumAmounts(f: Filter): Double = f(payments).map(_.amount).sum
+    def sumAmounts(f: Filter): Double = payments.filter(f.test).map(_.amount).sum
 
     // Return amount owed to one entity by another entity, provided that the first entity
     // agrees to be responsible for a specific fraction of expenses
@@ -57,9 +53,9 @@ class MasonJar() {
         )
     }
 
-    def allPayers(): List[String] = payments.map(_.payer).distinct.sorted
+    def allPayers: List[String] = payments.map(_.payer).distinct.sorted
 
-    def combs2[T](lst: List[T]): List[(T,T)] = {
+    private def combs2[T](lst: List[T]): List[(T,T)] = {
         lst match {
             case List() => List()
             case _ :: Nil => List()
@@ -101,11 +97,10 @@ class MasonJar() {
 
     // Return a list of payer relationships indicating who owes whom
     def resolveDebts(): List[Payment] = {
-        val payers = allPayers()
+        val payers = allPayers
         val paid = payers.map(payer => {
             Balance(payer, payments.filter(_.payer == payer).map(_.amount).sum - payments.filter(_.payee == payer).map(_.amount).sum)
         })
-
         rebalance(paid)
     }
 

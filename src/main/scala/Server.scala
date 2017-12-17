@@ -33,7 +33,7 @@ object Server extends StreamApp {
     object SplitFractionQueryParam extends QueryParamDecoderMatcher[Double]("splitFraction")
 
     // Extract a payment option as a string or return an empty string
-    def getPaymentById(id: Int): String = payments.getPayment(id).map(_.toString) getOrElse s"no such payment (id=$id)"
+    def getPaymentById(id: Int): String = payments.index(id).map(_.toString) getOrElse s"no such payment (id=$id)"
 
     // Service handling insertion, retrieval, and deletion of payment records
     val paymentService = HttpService {
@@ -48,8 +48,8 @@ object Server extends StreamApp {
 
         case GET -> Root / "payments" :? AfterDateQueryParam(after) +& BeforeDateQueryParam(before) =>
             val paymentList: List[Payment] = payments
-                .getPayments(PaidAfter(after) + PaidBefore(before))
-                .sortWith(_.id < _.id)
+                .search(PaidAfter(after) + PaidBefore(before))
+                .sortWith(_.id.getOrElse(-1) < _.id.getOrElse(-1))
             Ok(paymentList.asJson)
 
         case GET -> Root / "payments" / "count" => Ok(payments.length.toString)
@@ -64,7 +64,7 @@ object Server extends StreamApp {
             // Somehow 400 (BadRequest) automatically emitted when the JSON is invalid
             for {
                 pmt <- request.as(jsonOf[Payment])
-                resp <- Ok(payments.addPayment(pmt).toString)
+                resp <- Ok(payments.add(pmt).toString)
             } yield resp
 
         case request @ POST -> Root / "payments" / "delete" =>
