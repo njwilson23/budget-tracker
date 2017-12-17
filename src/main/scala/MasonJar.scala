@@ -2,85 +2,49 @@ package masonjar
 
 import java.time.LocalDate
 
-class PaymentFilter(date: Option[LocalDate => Boolean] = None,
-                    payer: Option[String] = None,
-                    payee: Option[String] = None,
-                    amount: Option[Double => Boolean] = None) {
-
-    private def trueOrNone(opt: Option[Boolean]): Boolean = opt match {
-        case Some(tf) => tf
-        case None => true
-    }
-
-    private def qualifier(pmt: Payment): Boolean = trueOrNone(date.map(_.apply(pmt.date))) &
-                                                   trueOrNone(payer.map(_ == pmt.payer)) &
-                                                   trueOrNone(payee.map(_ == pmt.payee)) &
-                                                   trueOrNone(amount.map(_.apply(pmt.amount)))
-
-    def apply(payments: List[(Int, Payment)]): List[(Int, Payment)] = payments.filter(it => qualifier(it._2))
-}
-
-object PaymentFilter {
-    def suchThat(after: Option[LocalDate] = None,
-                 before: Option[LocalDate] = None,
-                 atLeast: Option[Double] = None,
-                 under: Option[Double] = None,
-                 payer: Option[String] = None,
-                 payee: Option[String] = None): PaymentFilter = {
-
-        new PaymentFilter(
-            payer = payer,
-            payee = payee,
-            amount = Some((amt: Double) => (atLeast.isEmpty || amt >= atLeast.get) && (under.isEmpty || amt < under.get)),
-            date = Some((dt: LocalDate) => (after.isEmpty || dt.isAfter(after.get)) && (before.isEmpty || dt.isBefore(before.get)))
-        )
-    }
-}
-
 class MasonJar() {
-    private var payments: List[(Int, Payment)] = List()
+    private var payments: List[Payment] = List()
     private var index: Int = -1
 
     def length: Int = payments.length
 
     def addPayment(pmt: Payment): Int = {
         index = index + 1
-        payments = (index, pmt) :: payments
+        payments = Payment(pmt.date, pmt.payer, pmt.payee, pmt.amount, index) :: payments
         index
     }
 
-    def _getPaymentByIndex(index: Int, payments: List[(Int, Payment)]): Option[Payment] ={
+    def _getPaymentByIndex(index: Int, payments: List[Payment]): Option[Payment] ={
         if (payments.isEmpty) None
-        else payments.head match {
-            case (i, pmt) if i == index => Some(pmt)
-            case (i, _) if i != index => _getPaymentByIndex(index, payments.tail)
-        }
+        else if (payments.head.id == index) Some(payments.head)
+        else _getPaymentByIndex(index, payments.tail)
     }
 
     def getPayment(index: Int): Option[Payment] = _getPaymentByIndex(index, payments)
 
-    def getPayments(f: PaymentFilter): List[(Int, Payment)] = f(payments)
+    def getPayments(filter: Filter): List[Payment] = filter(payments)
 
-    def getAllPayments: List[(Int, Payment)] = payments
+    def getAllPayments: List[Payment] = payments
 
     def popPayment(index: Int): Option[Payment] = {
         val pmt = _getPaymentByIndex(index, payments)
         if (pmt.isDefined) {
-            payments = payments.filter(_._1 != index)
+            payments = payments.filter(_.id != index)
         }
         pmt
     }
 
-    def aggregate[T](f: PaymentFilter)(agg: List[(Int, Payment)] => T): T = agg(f.apply(payments))
-    def sumAmounts(f: PaymentFilter): Double = aggregate(f)((lst: List[(Int, Payment)]) => lst.map(_._2.amount).sum)
+    def aggregate[T](f: Filter)(agg: List[Payment] => T): T = agg(f(payments))
+
+    def sumAmounts(f: Filter): Double = f(payments).map(_.amount).sum
 
     // Return amount owed to one entity by another entity, provided that the first entity
     // agrees to be responsible for a specific fraction of expenses
     def owed(debtor: String, lender: String, fractionHandledByLender: Double = 0.5): Payment = {
-        val spentByLender = payments.filter(ip => ip._2.payer == lender & ip._2.payee != debtor).map(_._2.amount).sum
-        val spentByDebtor = payments.filter(ip => ip._2.payer == debtor & ip._2.payee != lender).map(_._2.amount).sum
-        val lenderToDebtor = sumAmounts(new PaymentFilter(payer=Some(lender), payee=Some(debtor)))
-        val debtorToLender = sumAmounts(new PaymentFilter(payer=Some(debtor), payee=Some(lender)))
+        val spentByLender = payments.filter(ip => ip.payer == lender & ip.payee != debtor).map(_.amount).sum
+        val spentByDebtor = payments.filter(ip => ip.payer == debtor & ip.payee != lender).map(_.amount).sum
+        val lenderToDebtor = sumAmounts(PaidBy(lender) + PaidTo(debtor))
+        val debtorToLender = sumAmounts(PaidBy(debtor) + PaidTo(lender))
 
         Payment(
             date = LocalDate.now(),
@@ -93,13 +57,13 @@ class MasonJar() {
         )
     }
 
-    def allPayers(): List[String] = payments.map(_._2.payer).toSet.toList.sorted
+    def allPayers(): List[String] = payments.map(_.payer).distinct.sorted
 
     def combs2[T](lst: List[T]): List[(T,T)] = {
         lst match {
             case List() => List()
             case _ :: Nil => List()
-            case a :: b :: rest => List((a, b)) ::: combs2(a::rest) ::: combs2(b::rest)
+            case a :: b :: rest => List((a, b)) ++ combs2(a::rest) ++ combs2(b::rest)
         }
     }
 
@@ -116,32 +80,33 @@ class MasonJar() {
     }
 
     // Return a sequence of payments that would resolve all debts
-    def resolveDebts(balances: List[Balance]): List[Payment] = {
+    def rebalance(balances: List[Balance]): List[Payment] = {
         val sumBalance = balances.map(_.amount).sum
         val meanBalance = sumBalance / balances.length
         balances match {
             case List() => List()
             case _ :: Nil => List()
             case Balance(owner, amt) :: rest =>
-                if (amt == meanBalance) resolveDebts(rest)
+                if ((amt - meanBalance).abs < 0.01) rebalance(rest)
                 else {
                     val pmt: Payment = distribute(rest, owner, meanBalance - amt).asPositive
-                    val newRest = rest.map(bal => if (bal.owner == pmt.payee) Balance(bal.owner, bal.amount - pmt.amount)
-                    else if (bal.owner == pmt.payer) Balance(bal.owner, bal.amount + pmt.amount)
-                    else bal)
-                    pmt :: resolveDebts(newRest)
+                    val newRest = rest.map(bal =>
+                        if (bal.owner == pmt.payee) Balance(bal.owner, bal.amount - pmt.amount)
+                        else if (bal.owner == pmt.payer) Balance(bal.owner, bal.amount + pmt.amount)
+                        else bal)
+                    pmt :: rebalance(newRest)
                 }
         }
     }
 
     // Return a list of payer relationships indicating who owes whom
-    def allDebts(): List[Payment] = {
+    def resolveDebts(): List[Payment] = {
         val payers = allPayers()
         val paid = payers.map(payer => {
-            Balance(payer, payments.filter(_._2.payer == payer).map(_._2.amount).sum - payments.filter(_._2.payee == payer).map(_._2.amount).sum)
+            Balance(payer, payments.filter(_.payer == payer).map(_.amount).sum - payments.filter(_.payee == payer).map(_.amount).sum)
         })
 
-        resolveDebts(paid)
+        rebalance(paid)
     }
 
 }

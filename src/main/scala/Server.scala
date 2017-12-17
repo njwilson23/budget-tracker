@@ -13,10 +13,10 @@ import org.http4s.server.middleware._
 import org.http4s.circe._
 import org.http4s.server.blaze.BlazeBuilder
 import org.http4s.util.StreamApp
-import masonjar.{MasonJar, Payment, PaymentID, PaymentFilter}
+import masonjar._
 import masonjar.PaymentImplicits._
 
-object Main extends StreamApp {
+object Server extends StreamApp {
 
     // State object
     val payments = new MasonJar()
@@ -47,9 +47,9 @@ object Main extends StreamApp {
                                 Some(request)).getOrElseF(NotFound())
 
         case GET -> Root / "payments" :? AfterDateQueryParam(after) +& BeforeDateQueryParam(before) =>
-            val paymentList: List[(Int, Payment)] = payments
-                .getPayments(PaymentFilter.suchThat(after=Some(after), before=Some(before)))
-                .sortWith(_._1 < _._1)
+            val paymentList: List[Payment] = payments
+                .getPayments(PaidAfter(after) + PaidBefore(before))
+                .sortWith(_.id < _.id)
             Ok(paymentList.asJson)
 
         case GET -> Root / "payments" / "count" => Ok(payments.length.toString)

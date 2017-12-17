@@ -3,7 +3,7 @@ package masonjar
 import io.circe._
 import java.time.LocalDate
 
-case class Payment(date: LocalDate, payer: String, payee: String, amount: Double) {
+case class Payment(date: LocalDate, payer: String, payee: String, amount: Double, id: Int = -1) {
     def asPositive: Payment = {
         if (amount >= 0) Payment(date, payer, payee, amount)
         else Payment(date, payee, payer, -amount)

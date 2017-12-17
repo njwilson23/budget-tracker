@@ -4,6 +4,8 @@ version := "0.1"
 
 scalaVersion := "2.12.4"
 
+cancelable in Global := true
+
 val Http4sVersion = "0.17.5"
 val Specs2Version = "4.0.0"
 val LogbackVersion = "1.2.3"
