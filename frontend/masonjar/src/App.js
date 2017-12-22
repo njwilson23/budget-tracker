@@ -29,14 +29,13 @@ function Payment(props) {
 function PaymentList(props) {
 
     props.payments.sort(
-        ([_ida, a], [_idb, b]) =>
-            (a.date < b.date) ? -1 : ((a.date > b.date) ? 1 : 0)
+        (a, b) => (a.date < b.date) ? -1 : ((a.date > b.date) ? 1 : 0)
     );
-    let sortedPayments = props.payments.map(([pmtId, pmt], idx) =>
-        <Payment key={pmtId}
+    let sortedPayments = props.payments.map((pmt, idx) =>
+        <Payment key={pmt.id}
                  idx={idx}
                  payment={pmt}
-                 deleteHandler={e => props.deletePayment(pmtId)}
+                 deleteHandler={e => props.deletePayment(pmt.id)}
                  onClick={e => props.onClick(pmt)}
          />
     );
@@ -185,10 +184,10 @@ class App extends Component {
         req.open("POST", this.state.host + "/payments/add", true);
         req.onreadystatechange = () => {
             if (req.readyState === XMLHttpRequest.DONE && req.status === 200) {
-                let pmtId = Number(req.responseText);
                 let pmtCopy = Object.assign({}, pmt);
+                pmtCopy.id = Number(req.responseText);
                 this.setState(
-                    {"payments": this.state.payments.concat([[pmtId, pmtCopy]])}
+                    {"payments": this.state.payments.concat([pmtCopy])}
                 );
             }
         }
@@ -200,10 +199,7 @@ class App extends Component {
         req.open("POST", this.state.host + "/payments/delete", true);
         req.onreadystatechange = () => {
             if (req.readyState === XMLHttpRequest.DONE && req.status === 200) {
-                this.setState({"payments":
-                               this.state.payments.filter(
-                                   ([pmtId, _]) => pmtId !== id
-                               )});
+                this.setState({"payments": this.state.payments.filter(pmt => pmt.id !== id)});
             }
         }
         req.send(JSON.stringify({"id": id}));
@@ -244,6 +240,7 @@ class App extends Component {
                     amtSetter={amt => this.updateEditor("amount", amt)}
                     getValues={() => this.state.editor}
                     post={this.addPayment}
+                    settle={() => this.getOwed("Alice", "Bob")}
                 />
                 <PaymentList payments={this.state.payments.slice()}
                              deletePayment={this.deletePayment}
