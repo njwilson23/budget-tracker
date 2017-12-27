@@ -2,6 +2,7 @@ import org.scalatest.{FlatSpec, Matchers}
 import java.time.LocalDate
 
 import masonjar._
+import masonjar.FilterImplicits._
 
 class MasonJarTests extends FlatSpec with Matchers {
 
@@ -60,8 +61,8 @@ class MasonJarTests extends FlatSpec with Matchers {
         masonJar.add(Payment(LocalDate.of(2015, 4, 10), "Bob", "Charlize", 3.00))
         masonJar.add(Payment(LocalDate.of(2015, 4, 12), "Charlize", "Alice", 4.00))
 
-        masonJar.search(CompositeFilter(List(PaidAfter(LocalDate.of(2015, 4, 9))))).length should be (2)
-        masonJar.search(CompositeFilter(List(PaidBefore(LocalDate.of(2015, 4, 9))))).length should be (1)
+        masonJar.search(PaidAfter(LocalDate.of(2015, 4, 9))).length should be (2)
+        masonJar.search(PaidBefore(LocalDate.of(2015, 4, 9))).length should be (1)
         masonJar.search(PaidAfter(LocalDate.of(2015, 4, 8)) + PaidBefore(LocalDate.of(2015, 4, 11))).length should be (2)
     }
 
@@ -109,7 +110,7 @@ class FilterTests extends FlatSpec with Matchers {
             Payment(LocalDate.of(2017, 12, 2), "Alice", "Bob", 0.5),
             Payment(LocalDate.of(2017, 12, 4), "Alice", "Dani", 2.0),
             Payment(LocalDate.of(2017, 12, 4), "Bob", "Charlize", 4.25)
-        ).filter(PaidBy("Alice").test)
+        ).filter(_.test(PaidBy("Alice")))
 
         payments.length should be (3)
     }
@@ -121,7 +122,7 @@ class FilterTests extends FlatSpec with Matchers {
             Payment(LocalDate.of(2017, 12, 2), "Alice", "Bob", 0.5),
             Payment(LocalDate.of(2017, 12, 4), "Alice", "Dani", 2.0),
             Payment(LocalDate.of(2017, 12, 4), "Bob", "Charlize", 4.25)
-        ).filter((PaidBy("Alice") + AtLeast(1.0)).test)
+        ).filter(_.test(PaidBy("Alice") + AtLeast(1.0)))
 
         payments.length should be (2)
     }
@@ -135,8 +136,8 @@ class FilterTests extends FlatSpec with Matchers {
             Payment(LocalDate.of(2017, 12, 4), "Bob", "Charlize", 4.25)
         )
 
-        val subset1 = payments.filter((PaidBy("Alice") + (AtLeast(0.25) + PaidTo("Bob"))).test)
-        val subset2 = payments.filter(((PaidBy("Alice") + AtLeast(0.25)) + PaidTo("Bob")).test)
+        val subset1 = payments.filter(_.test(PaidBy("Alice") + (AtLeast(0.25) + PaidTo("Bob"))))
+        val subset2 = payments.filter(_.test((PaidBy("Alice") + AtLeast(0.25)) + PaidTo("Bob")))
 
         subset1.zip(subset2).map(a => a._1 == a._2).map(if (_) 1 else 0).sum should be (2)
     }

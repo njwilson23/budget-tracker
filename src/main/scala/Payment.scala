@@ -12,6 +12,11 @@ case class Payment(date: LocalDate, payer: String, payee: String, amount: Double
         if (amount >= 0) Payment(date, payer, payee, amount)
         else Payment(date, payee, payer, -amount)
     }
+
+    def test(predicate: Filter): Boolean = predicate match {
+        case IdentityFilter => true
+        case CompositeFilter(head, tail) => head(this) & test(tail)
+    }
 }
 
 case class PaymentID(id: Int)

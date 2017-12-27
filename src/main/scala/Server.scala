@@ -8,6 +8,7 @@ import fs2.{Stream, Task}
 import io.circe.generic.auto._
 import io.circe.syntax._
 import masonjar.PaymentImplicits._
+import masonjar.FilterImplicits._
 import masonjar._
 import org.http4s._
 import org.http4s.circe._

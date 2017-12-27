@@ -1,8 +1,10 @@
 package masonjar
 
 import java.time.LocalDate
+import FilterImplicits._
 
 class MasonJar() {
+
     private var payments: List[Payment] = List()
     private var index: Int = -1
 
@@ -16,14 +18,14 @@ class MasonJar() {
 
     def index(index: Int): Option[Payment] = getByIndex(index, payments)
 
-    def search(f: Testable): List[Payment] = payments.filter(f.test)
+    def search(f: Filter): List[Payment] = payments.filter(_.test(f))
 
     def allPayments: List[Payment] = payments
 
     def pop(index: Int): Option[Payment] = {
         val pmt = getByIndex(index, payments)
-        val predicate = PaymentIDEquals(index)
-        payments = payments.filter(p => !predicate.test(p))
+        val predicate = CompositeFilter(PaymentIDEquals(index))
+        payments = payments.filter(!_.test(predicate))
         pmt
     }
 
@@ -47,9 +49,9 @@ class MasonJar() {
     }
 
     // Sum payments meeting particular criteria
-    def tally(pred: Testable): Double = payments.filter(pred.test).map(_.amount).sum
+    def tally(pred: Filter): Double = payments.filter(_.test(pred)).map(_.amount).sum
 
-    // Distribute a payment or debit from an entity amoungst a list of balances.
+    // Distribute a payment or debit from an entity amongst a list of balances.
     //
     // In this implementation, a positive transaction is applied to the lowest balance, while a negative transaction is
     // applied to the largest balance
