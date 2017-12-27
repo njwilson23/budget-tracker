@@ -22,8 +22,8 @@ class MasonJar() {
 
     def pop(index: Int): Option[Payment] = {
         val pmt = getByIndex(index, payments)
-        val pred = PaymentIDEquals(index)
-        payments = payments.filter(p => !pred.test(p))
+        val predicate = PaymentIDEquals(index)
+        payments = payments.filter(p => !predicate.test(p))
         pmt
     }
 
