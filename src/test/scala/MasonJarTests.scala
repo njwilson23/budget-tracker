@@ -1,8 +1,12 @@
 import org.scalatest.{FlatSpec, Matchers}
 import java.time.LocalDate
 
+import io.circe.generic.auto._
+import io.circe.syntax._
+
 import masonjar._
 import masonjar.FilterImplicits._
+import masonjar.PaymentImplicits._
 
 class MasonJarTests extends FlatSpec with Matchers {
 
@@ -99,6 +103,21 @@ class MasonJarTests extends FlatSpec with Matchers {
     }
 
 }
+
+class EncodingTests extends FlatSpec with Matchers {
+
+    "A Payment" should "be encodable as JSON" in {
+        val payment = Payment(LocalDate.of(2018, 1, 1), "Alice", "Bob", 5.0)
+        //PaymentImplicits.encodePayment(payment)
+        payment.asJson.toString.length should be (102)
+    }
+
+    "A list of Payments" should "be encodable as JSON" in {
+        val payments = List(
+            Payment(LocalDate.of(2018, 1, 1), "Alice", "Bob", 5.0),
+            Payment(LocalDate.of(2018, 1, 1), "Alice", "Charlie", 7.0)
+        )
+        payments.asJson.toString.length should be (242)
     }
 
 }

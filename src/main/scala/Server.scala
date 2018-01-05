@@ -60,6 +60,8 @@ object Server extends StreamApp {
         case GET -> Root / "payments" / "owed" :? LenderQueryParam(from) +& DebtorQueryParam(to) +& SplitFractionQueryParam(split) =>
             Ok(payments.owed(from, to, split).asJson)
 
+        case GET -> Root / "resolve" => Ok(payments.resolveDebts.asJson)
+
         case request @ POST -> Root / "payments" / "add" =>
             // Somehow 400 (BadRequest) automatically emitted when the JSON is invalid
             for {
