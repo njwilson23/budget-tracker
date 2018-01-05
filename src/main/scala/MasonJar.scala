@@ -38,7 +38,7 @@ class MasonJar() {
         val debtorToLender = tally(PaidBy(debtor) + PaidTo(lender))
 
         Payment(
-            date = LocalDate.now(),
+            date = LocalDate.now,
             payer = debtor,
             payee = lender,
             amount = lenderToDebtor -
@@ -59,15 +59,15 @@ class MasonJar() {
         if (amount > 0) {
             val maxBalance = balances.map(_.amount).max
             val ownerHighest = balances.drop(balances.indexWhere(_.amount == maxBalance)).head.owner
-            Payment(LocalDate.now(), entity, ownerHighest, amount)
+            Payment(LocalDate.now, entity, ownerHighest, amount)
         } else {
             val minBalance = balances.map(_.amount).min
             val ownerLowest = balances.drop(balances.indexWhere(_.amount == minBalance)).head.owner
-            Payment(LocalDate.now(), ownerLowest, entity, amount)
+            Payment(LocalDate.now, ownerLowest, entity, -amount)
         }
     }
 
-    // Return a sequence of payments that would resolve all deficits and surpluses across multiple balances
+    // Return a sequence of payments that would equalise all balances held by multiple payers
     def rebalance(balances: List[Balance]): List[Payment] = {
         val sumBalance = balances.map(_.amount).sum
         val meanBalance = sumBalance / balances.length
@@ -89,13 +89,11 @@ class MasonJar() {
 
     def allPayers: List[String] = payments.map(_.payer).distinct.sorted
 
-    // Return a list of payer relationships indicating who owes whom
-    def resolveDebts(): List[Payment] = {
-        val paid = allPayers.map(payer => {
-            Balance(payer,
-                payments.filter(_.payer == payer).map(_.amount).sum -
-                    payments.filter(_.payee == payer).map(_.amount).sum)
-        })
+    // Return a list of payments to settle all existing balances
+    def resolveDebts: List[Payment] = {
+        val paid = allPayers.map(payer => Balance(payer,
+                                                  payments.filter(_.payer == payer).map(_.amount).sum -
+                                                    payments.filter(_.payee == payer).map(_.amount).sum))
         rebalance(paid)
     }
 

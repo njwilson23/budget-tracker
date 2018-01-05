@@ -85,18 +85,20 @@ class MasonJarTests extends FlatSpec with Matchers {
         settlement2.amount should be (-1.0)
     }
 
-    "A MasonJar" should "determine debts among multiple payers" in {
+    "A MasonJar" should "allocate debts among multiple payers" in {
         val masonJar = new MasonJar()
-        masonJar.add(Payment(LocalDate.of(2015, 4, 7), "Alice", "Store", 1.00))
-        masonJar.add(Payment(LocalDate.of(2015, 4, 9), "Bob", "Store", 2.00))
-        masonJar.add(Payment(LocalDate.of(2015, 4, 10), "Cassandra", "Store", 3.00))
+        masonJar.add(Payment(LocalDate.of(2015, 4, 7), "Alice", "Rental", 709.83))
+        masonJar.add(Payment(LocalDate.of(2015, 4, 7), "Alice", "Gas", 60.00))
+        masonJar.add(Payment(LocalDate.of(2015, 4, 9), "Bob", "Groceries", 120.00))
+        masonJar.add(Payment(LocalDate.of(2015, 4, 10), "Cassandra", "", 0.00))
 
-        val debts = masonJar.resolveDebts()
-        val balanceA = 1.0 + debts.filter(_.payer == "Alice").map(_.amount).sum - debts.filter(_.payee == "Alice").map(_.amount).sum
-        val balanceB = 2.0 + debts.filter(_.payer == "Bob").map(_.amount).sum - debts.filter(_.payee == "Bob").map(_.amount).sum
-        val balanceC = 3.0 + debts.filter(_.payer == "Cassandra").map(_.amount).sum - debts.filter(_.payee == "Cassandra").map(_.amount).sum
-        balanceA should be (balanceB)
-        balanceB should be (balanceC)
+        val debts = masonJar.resolveDebts
+        debts.length should be (2)
+        debts.filter(_.payer == "Bob").map(_.amount).sum should be (176.61)
+        debts.filter(_.payer == "Cassandra").map(_.amount).sum should be (473.22)
+    }
+
+}
     }
 
 }

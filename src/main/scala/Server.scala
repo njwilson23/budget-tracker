@@ -25,7 +25,6 @@ object Server extends StreamApp {
     implicit val dateQueryParamDecoder: QueryParamDecoder[LocalDate] = QueryParamDecoder[String].map(LocalDate.parse)
 
     // Define a matcher to extract payment IDs from URLs
-    //object IdQueryParamMatcher extends QueryParamDecoderMatcher[Int]("id")
     object AfterDateQueryParam extends QueryParamDecoderMatcher[LocalDate]("after")
     object BeforeDateQueryParam extends QueryParamDecoderMatcher[LocalDate]("before")
 
