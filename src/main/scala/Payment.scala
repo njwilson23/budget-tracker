@@ -13,10 +13,7 @@ case class Payment(date: LocalDate, payer: String, payee: String, amount: Double
         else Payment(date, payee, payer, -amount)
     }
 
-    def test(predicate: Filter): Boolean = predicate match {
-        case IdentityFilter => true
-        case CompositeFilter(head, tail) => head(this) & test(tail)
-    }
+    def test(predicate: Rule): Boolean = predicate(this)
 }
 
 case class PaymentID(id: Int)

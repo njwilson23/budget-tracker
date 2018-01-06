@@ -1,11 +1,9 @@
 import org.scalatest.{FlatSpec, Matchers}
 import java.time.LocalDate
 
-import io.circe.generic.auto._
 import io.circe.syntax._
 
 import masonjar._
-import masonjar.FilterImplicits._
 import masonjar.PaymentImplicits._
 
 class MasonJarTests extends FlatSpec with Matchers {

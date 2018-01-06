@@ -1,7 +1,6 @@
 package masonjar
 
 import java.time.LocalDate
-import FilterImplicits._
 
 class MasonJar() {
 
@@ -24,7 +23,7 @@ class MasonJar() {
 
     def pop(index: Int): Option[Payment] = {
         val pmt = getByIndex(index, payments)
-        val predicate = CompositeFilter(PaymentIDEquals(index))
+        val predicate = PaymentIDEquals(index)
         payments = payments.filter(!_.test(predicate))
         pmt
     }

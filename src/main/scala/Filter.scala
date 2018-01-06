@@ -3,52 +3,51 @@
 package masonjar
 import java.time.LocalDate
 
-object FilterImplicits {
-    implicit val ruleToCompositeFilter: Rule => CompositeFilter = rule => CompositeFilter(rule, IdentityFilter)
-}
-
-sealed trait Filter {
-    def +(other: CompositeFilter): CompositeFilter
-}
-
-final case object IdentityFilter extends Filter {
-    def +(other: CompositeFilter): CompositeFilter = other
-}
-
-final case class CompositeFilter(head: Rule, tail: Filter = IdentityFilter) extends Filter {
-    def +(other: CompositeFilter): CompositeFilter = head + (tail + other)
+object TypeAliases {
+    type Predicate = (Payment) => Boolean
 }
 
 trait Rule {
-    def apply(p: Payment): Boolean
-    def unary_!(): Rule = !this.apply(_)
-    def +(other: CompositeFilter): CompositeFilter = CompositeFilter(this, other)
+    def apply(payment: Payment): Boolean
+    def +(that: Filter): Filter
+    def unary_!(): Filter
 }
 
-final case class PaidAfter(dt: LocalDate) extends Rule {
-    def apply(pmt: Payment): Boolean = pmt.date.isAfter(dt)
+object Filter {
+    def apply(predicates: TypeAliases.Predicate*) = new Filter(predicates.toList)
 }
 
-final case class PaidBefore(dt: LocalDate) extends Rule {
-    def apply(pmt: Payment): Boolean = pmt.date.isBefore(dt)
+class Filter(val predicates: List[TypeAliases.Predicate]) extends Rule {
+    def apply(payment: Payment): Boolean = predicates.map(_.apply(payment)).reduce(_ && _)
+    def +(that: Filter): Filter = Filter(this.predicates ++ that.predicates: _*)
+    def unary_!(): Filter = Filter((payment) => !this.apply(payment))
 }
 
-final case class AtLeast(amt: Double) extends Rule {
-    def apply(pmt: Payment): Boolean = (pmt.amount - amt) >= -0.005
+object PaidAfter {
+    def apply(dt: LocalDate): Filter = Filter((payment: Payment) => payment.date.isAfter(dt))
 }
 
-final case class AtMost(amt: Double) extends Rule {
-    def apply(pmt: Payment): Boolean = (pmt.amount - amt) <= 0.005
+object PaidBefore {
+    def apply(dt: LocalDate): Filter = Filter((payment: Payment) => payment.date.isBefore(dt))
 }
 
-final case class PaidBy(payer: String) extends Rule {
-    def apply(pmt: Payment): Boolean = pmt.payer == payer
+object AtLeast {
+    def apply(amt: Double): Filter = Filter((payment: Payment) => (payment.amount - amt) >= -0.005)
 }
 
-final case class PaidTo(payee: String) extends Rule {
-    def apply(pmt: Payment): Boolean = pmt.payee == payee
+object AtMost {
+    def apply(amt: Double): Filter = Filter((payment: Payment) => (payment.amount - amt) <= 0.005)
 }
 
-final case class PaymentIDEquals(id: Int) extends Rule {
-    def apply(pmt: Payment): Boolean = pmt.id.getOrElse(id + 1) == id
+object PaidBy {
+    def apply(payer: String): Filter = Filter((payment: Payment) => payment.payer == payer)
 }
+
+object PaidTo {
+    def apply(payee: String): Filter = Filter((payment: Payment) => payment.payee == payee)
+}
+
+object PaymentIDEquals {
+    def apply(id: Int): Filter = Filter((payment: Payment) => payment.id.getOrElse(id + 1) == id)
+}
+
